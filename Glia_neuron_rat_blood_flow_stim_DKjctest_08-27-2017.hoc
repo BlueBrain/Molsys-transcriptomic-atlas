@@ -1,0 +1,895 @@
+
+//load_file("nrngui.hoc")
+
+create soma
+access soma
+
+insert glia_2013
+time =0 
+tstop=750000.0//ms
+tbeginrec = 480000
+tend=tstop
+tfinal=tstop
+
+skipstep=0
+
+tstim= 000012000 //ms 
+tstimne = 00500000 //ms
+tstimvip = 00020000 // ms
+tstimvip2 = 0020000 //ms
+tstimK = 0000490000 //ms
+tstimend= 00012000 //ms
+tstimendne = 000510000 //ms
+tstimendvip= 00020000 //ms
+tstimendvip2= 00020000 //ms
+tstimendK = 0000490000 // ms
+tBloodEnd=60000 //ms
+
+//tstimIclamp = 000010000 // ms
+//tstimIclampend = 0000000 // ms
+
+dt=0.003 //ms
+
+soma.Isyn_glia_2013=0
+vnstim = 0
+vgstim = 0
+soma.F0_glia_2013=0.012
+
+soma.Finprime_glia_2013=0
+soma.Fin_glia_2013=0.012
+
+taune1			=  10//10//1000//100//10 //1000	
+taune2			=  500000 //1000000
+
+tauvip1			=  1000
+tauvip2			=  10000	
+tauvip3			=  100000
+
+tauK1			= 1000
+tauK2			= 1000000
+
+objref output_file
+output_file = new File()
+objref output_file2
+output_file2 = new File()
+objref output_file3
+output_file3 = new File()
+
+//objref stim[1]
+
+finitialize()
+
+gRate=0.0002
+F0=0.012
+lag=1000
+t1=0
+
+//add the glutamatergic stimulation
+gbar    = 7.8e-06
+Ne	= 240
+
+oldy=0
+SmVn =2.5e04 
+SmVg =2.5e04 
+F= 9.64853e04
+glia=50
+
+// write execute flags
+write2 = 1
+write3 = 1
+
+output_file.wopen("output_file.dat")
+for i=0,tstop/( dt) {
+  fadvance()
+  ge=0 
+ // ge=240
+
+
+if (time>tstimK){
+	hk =   exp (-(time-tstimK)/tauK2) - exp(-(time-tstimK)/tauK1)
+	soma.hk_glia_2013=hk
+	}
+	
+if (time>tstimne){
+	ne =   exp (-(time-tstimne)/taune2) - exp(-(time-tstimne)/taune1)
+	soma.ne_glia_2013=ne
+	}
+	
+if (time>tstimvip){
+    vip    =   exp(-(time-tstimvip)/tauvip2) - exp(-(time-tstimvip)/tauvip1)
+    soma.vip_glia_2013=vip
+	}
+	
+if (time>tstimvip2){
+    vip2 =   exp (-(time-tstimvip2)/tauvip3) - exp(-(time-tstimvip2)/tauvip2)
+	soma.vip2_glia_2013=vip2
+	}
+  
+  if (time>tstim){
+    	//soma.Isyn_glia_2013=5
+	//soma.Isyn_glia_2013=1
+	soma.Isyn_glia_2013=0
+	//soma.Isyn_glia_2013=sin(t/1000)
+
+
+//soma {
+//		if (time=tstimIclamp) {
+//		stim[0].amp = sin(t/1000)
+//		stim[0].dur = 1
+//		stim[0].del = 1  
+// }
+//}
+
+
+    if (time<tstimend){
+
+    finf    = 3.5  // Hz
+    f0      = 32   // Hz
+    tau     = 2500 //msec
+
+	 ge= Ne*gbar*(finf+(f0-finf)*exp(-time/tau))
+	//ls -lge = 0
+	
+    if (ge == 0){
+      vnstim = 0
+    }    else{
+      if ((ge > 0) * (ge < 0.004)){
+        A = -0.00024
+        B = 13.005
+        vnstim = A+B*ge
+      }      else{
+        if ((ge >= 0.004) * (ge < 0.008)){
+          A1 = 0.00043
+          A2 = 0.30818
+          x0 = 0.00696
+          dx = 0.00182
+          vnstim = A2+(A1-A2)/(1+exp((ge-x0)/dx))
+        }        else{
+          A1 = -0.06444
+          A2 = 4622.7114
+          x0 = 2322.61814
+          p = 0.77215
+          vnstim = A2+(A1-A2)/(1+(ge/x0)^p)
+        }
+      }
+    }
+  }
+ }
+ 	// vnstim=SmVn/F*(2/3*0-soma.INa_glia_2013(0.5) ) // **** note the *0 
+	 vnstim = 0
+soma.Jstimn_glia_2013=vnstim
+   
+  	 //vgstim   = SmVg/F*2/3*glia*ge  // with vgstim and vnstim turned on get osc in ions using hoc with new init values (from 100 sec)
+    	 vgstim = 0
+
+    soma.Jstimg_glia_2013=vgstim
+   
+
+//}
+
+
+
+ if (time>tstimendK){
+    soma.hk_glia_2013=0
+}
+  if (time>tstimend){
+    soma.Isyn_glia_2013=0
+ }
+  
+ if (time>tstimendvip){
+    soma.vip_glia_2013=0
+}
+
+ if (time>tstimendne){
+    soma.ne_glia_2013=0
+}
+
+ if (time>tstimendvip2){
+    soma.vip2_glia_2013=0
+}
+
+
+  //if (1>0){
+  if (1<0){
+    //put in cortical blood flow 
+
+    lastF0 = F0*( 1.1+1.5*(exp(-(tBloodEnd-lag)/5000)-exp(-(tBloodEnd-lag)/2000)) ) //builtin1(tBloodEnd-lag);
+    taurise= 1000 * 0.1*1/( 1.5*(-1/5*exp(-0/5)+1/2*exp(-0/2))) //builtin2(0);
+
+    if ((time <= (tBloodEnd+t1)) && (time >= (t1+lag))){
+            y   =       F0* (1.1+1.5*(exp(-(time-lag)/5000)-exp(-(time-lag)/2000))) //builtin1(time-lag);
+    }else{
+      if (time > (tBloodEnd)){
+          y   =   F0+(lastF0-F0)*exp(-(time-tBloodEnd)/5000)
+      } else{
+           y   =   F0*(1+0.1*exp((time-lag)/taurise)) //builtin3(t,lag,taurise))
+      }
+  }
+  soma.Fin_glia_2013=y
+  if (i>0){
+    soma.Finprime_glia_2013=(y-oldy)/dt
+  
+  }
+  oldy=y
+}
+
+ 
+//} This bracket was paired with the open bracket on line 65 .. i=0 but moved to the end of the write statements
+
+//////////////////output writing loops below////////////////
+
+if (time > tbeginrec) {
+
+  if (skipstep>8000) {
+  
+	
+//1
+output_file.printf("%.10g ",time/1000)
+//2
+output_file.printf("%.10g ",soma.Nan_glia_2013(0.5))
+//3
+output_file.printf("%.10g ",soma.Nag_glia_2013(0.5))
+//4
+output_file.printf("%.10g ",soma.GLCn_glia_2013(0.5))
+//5
+output_file.printf("%.10g ",soma.GLCg_glia_2013(0.5))
+//6
+output_file.printf("%.10g ",soma.GAPn_glia_2013(0.5))
+//7
+output_file.printf("%.10g ",soma.GAPg_glia_2013(0.5))
+//8
+output_file.printf("%.10g ",soma.PEPn_glia_2013(0.5))
+//9
+output_file.printf("%.10g ",soma.PEPg_glia_2013(0.5))
+//10
+output_file.printf("%.10g ",soma.PYRn_glia_2013(0.5))
+//11
+output_file.printf("%.10g ",soma.PYRg_glia_2013(0.5))
+//12
+output_file.printf("%.10g ",soma.LACn_glia_2013(0.5))
+//13
+output_file.printf("%.10g ",soma.LACg_glia_2013(0.5))
+//14
+output_file.printf("%.10g ",soma.NADHcyton_glia_2013(0.5))
+//15
+output_file.printf("%.10g ",soma.NADHcytog_glia_2013(0.5))
+//16
+output_file.printf("%.10g ",soma.ATPn_glia_2013(0.5))
+//17
+output_file.printf("%.10g ",soma.ATPg_glia_2013(0.5))
+//18
+output_file.printf("%.10g ",soma.PCrn_glia_2013(0.5))
+//19
+output_file.printf("%.10g ",soma.PCrg_glia_2013(0.5))
+//20
+output_file.printf("%.10g ",soma.O2n_glia_2013(0.5))
+//21
+output_file.printf("%.10g ",soma.O2g_glia_2013(0.5))
+//22
+output_file.printf("%.10g ",soma.O2c_glia_2013(0.5))
+//23
+output_file.printf("%.10g ",soma.GLCc_glia_2013(0.5))
+//24
+output_file.printf("%.10g ",soma.LACc_glia_2013(0.5))
+//25
+output_file.printf("%.10g ",soma.Vv_glia_2013(0.5))
+//26
+output_file.printf("%.10g ",soma.Hb_glia_2013(0.5))
+//27
+output_file.printf("%.10g ",soma.GLCe_glia_2013(0.5))
+//28
+output_file.printf("%.10g ",soma.LACe_glia_2013(0.5))
+//29
+output_file.printf("%.10g ",soma.Ca_glia_2013(0.5))
+//30
+output_file.printf("%.10g ",soma.NADHmiton_glia_2013(0.5))
+//31
+output_file.printf("%.10g ",soma.NADHmitog_glia_2013(0.5))
+//32
+output_file.printf("%.10g ",soma.Rminusn_glia_2013(0.5))
+//33
+output_file.printf("%.10g ",soma.Rplusn_glia_2013(0.5))
+//34
+output_file.printf("%.10g ",soma.Rminusg_glia_2013(0.5))
+//35
+output_file.printf("%.10g ",soma.Rplusg_glia_2013(0.5))
+//36
+output_file.printf("%.10g ",soma.JleakNag_glia_2013(0.5))
+//37
+output_file.printf("%.10g ",soma.JleakNan_glia_2013(0.5))
+//38
+output_file.printf("%.10g ",soma.Jpumpg_glia_2013(0.5))
+//39
+output_file.printf("%.10g ",soma.Jpumpn_glia_2013(0.5))
+//40
+output_file.printf("%.10g ",soma.JGLCce_glia_2013(0.5))
+//41
+output_file.printf("%.10g ",soma.JGLCcg_glia_2013(0.5))
+//42
+output_file.printf("%.10g ",soma.JGLCeg_glia_2013(0.5))
+//43
+output_file.printf("%.10g ",soma.JGLCen_glia_2013(0.5))
+//44
+output_file.printf("%.10g ",soma.JHKPFKn_glia_2013(0.5))
+//45
+output_file.printf("%.10g ",soma.JHKPFKg_glia_2013(0.5))
+//46
+output_file.printf("%.10g ",soma.ADPn_glia_2013(0.5))
+//47
+output_file.printf("%.10g ",soma.ADPg_glia_2013(0.5))
+//48
+output_file.printf("%.10g ",soma.JPGKn_glia_2013(0.5))
+//49
+output_file.printf("%.10g ",soma.JPGKg_glia_2013(0.5))
+//50
+output_file.printf("%.10g ",soma.JPKn_glia_2013(0.5))
+//51
+output_file.printf("%.10g ",soma.JPKg_glia_2013(0.5))
+//52
+output_file.printf("%.10g ",soma.JLDHn_glia_2013(0.5))
+//53
+output_file.printf("%.10g ",soma.JLDHg_glia_2013(0.5))
+//54
+output_file.printf("%.10g ",soma.JLACec_glia_2013(0.5))
+//55
+output_file.printf("%.10g ",soma.JLACcg_glia_2013(0.5))
+//56
+output_file.printf("%.10g ",soma.JLACeg_glia_2013(0.5))
+//57
+output_file.printf("%.10g ",soma.JLACen_glia_2013(0.5))
+//58
+output_file.printf("%.10g ",soma.Jmitoing_glia_2013(0.5))
+//59
+output_file.printf("%.10g ",soma.Jmitoinn_glia_2013(0.5))
+//60
+output_file.printf("%.10g ",soma.Jmitooutn_glia_2013(0.5))
+//61
+output_file.printf("%.10g ",soma.Jmitooutg_glia_2013(0.5))
+//62
+output_file.printf("%.10g ",soma.Jshuttlen_glia_2013(0.5))
+
+// JC additions below
+
+//63
+output_file.printf("%.10g ",soma.cAMP_glia_2013(0.5))
+//64
+output_file.printf("%.10g ",soma.cAMP_ne_glia_2013(0.5))
+//65
+output_file.printf("%.10g ",soma.cAMP_vip_glia_2013(0.5))
+//66
+output_file.printf("%.10g ",soma.cAMP_vip2_glia_2013(0.5))
+//67
+output_file.printf("%.10g ",soma.cAMPtotal_glia_2013(0.5))
+//68
+output_file.printf("%.10g ",soma.glucgn_glia_2013(0.5))
+//69
+output_file.printf("%.10g ",soma.B_ins_glia_2013(0.5))
+//70
+output_file.printf("%.10g ",soma.g6p_glia_2013(0.5))
+//71
+output_file.printf("%.10g ",soma.GPa_glia_2013(0.5))
+//72
+output_file.printf("%.10g ",soma.GSa_glia_2013(0.5))
+//73
+output_file.printf("%.10g ",soma.glyc_glia_2013(0.5))
+//74
+output_file.printf("%.10g ",soma.gluc_glia_2013(0.5))
+//75
+output_file.printf("%.10g ",soma.B_gluc_glia_2013(0.5))
+//76
+output_file.printf("%.10g ",soma.vglucgn_glia_2013(0.5))
+//77
+output_file.printf("%.10g ",soma.vd_Bglucgn_glia_2013(0.5))
+//78
+output_file.printf("%.10g ",soma.vGgluc_glia_2013(0.5))
+//79
+output_file.printf("%.10g ",soma.vigluc_glia_2013(0.5))
+//80
+output_file.printf("%.10g ",soma.vins_glia_2013(0.5))
+//81
+output_file.printf("%.10g ",soma.vd_Bins_glia_2013(0.5))
+//82
+output_file.printf("%.10g ",soma.PKa_glia_2013(0.5))
+//83
+output_file.printf("%.10g ",soma.PP1_glia_2013(0.5))
+//84
+output_file.printf("%.10g ",soma.PP1_GPa_glia_2013(0.5))
+//85
+output_file.printf("%.10g ",soma.vtL1_glia_2013(0.5))
+//86
+output_file.printf("%.10g ",soma.vtS1_glia_2013(0.5))
+//87
+output_file.printf("%.10g ",soma.vtF1_glia_2013(0.5))
+//88
+output_file.printf("%.10g ",soma.vL1_glia_2013(0.5))
+//89
+output_file.printf("%.10g ",soma.v_L1_glia_2013(0.5))
+//90
+output_file.printf("%.10g ",soma.vL2_glia_2013(0.5))
+//91
+output_file.printf("%.10g ",soma.v_L2_glia_2013(0.5))
+//92
+output_file.printf("%.10g ",soma.vL3_glia_2013(0.5))
+//93
+output_file.printf("%.10g ",soma.v_L3_glia_2013(0.5))
+//94
+output_file.printf("%.10g ",soma.vL4_glia_2013(0.5))
+//95
+output_file.printf("%.10g ",soma.vL13_glia_2013(0.5))
+//96
+output_file.printf("%.10g ",soma.CC_glia_2013(0.5))
+//97
+output_file.printf("%.10g ",soma.R2C2_glia_2013(0.5))
+//98
+output_file.printf("%.10g ",soma.R2CcAMP2_glia_2013(0.5))
+//99
+output_file.printf("%.10g ",soma.R2cAMP4_glia_2013(0.5))
+//100
+output_file.printf("%.10g ",soma.ne_glia_2013(0.5))
+//101
+output_file.printf("%.10g ",soma.vip_glia_2013(0.5))
+//102
+output_file.printf("%.10g ",soma.vip2_glia_2013(0.5))
+//103
+output_file.printf("%.10g ",soma.viptotal_glia_2013(0.5))
+//104
+output_file.printf("%.10g ",soma.gluco_glia_2013(0.5))
+//105
+output_file.printf("%.10g ",soma.alan_glia_2013(0.5))
+//106
+output_file.printf("%.10g ",soma.oa_c_glia_2013(0.5))
+//107
+output_file.printf("%.10g ",soma.pep_glia_2013(0.5))
+//108
+output_file.printf("%.10g ",soma.peptotal_glia_2013(0.5))
+//109
+output_file.printf("%.10g ",soma.psin_glia_2013(0.5))
+//110
+output_file.printf("%.10g ",soma.Jstimn_glia_2013(0.5))
+//111
+output_file.printf("%.10g ",soma.Jstimg_glia_2013(0.5))
+//112
+output_file.printf("%.10g ",soma.ICa_glia_2013(0.5))
+//113
+output_file.printf("%.10g ",soma.INa_glia_2013(0.5))
+//114
+output_file.printf("%.10g ",soma.IK_glia_2013(0.5))
+//115
+output_file.printf("%.10g ",soma.vfeed_glia_2013(0.5))
+//116
+output_file.printf("%.10g ",soma.kd_glia_2013(0.5))
+//117
+output_file.printf("%.10g ",soma.B_glucgn_glia_2013(0.5))
+//118
+output_file.printf("%.10g ",soma.blah_glia_2013(0.5))
+//119
+output_file.printf("%.10g ",soma.PYRgtotal_glia_2013(0.5))
+//120
+output_file.printf("%.10g ",soma.JLDHg_glia_2013(0.5))
+//121
+output_file.printf("%.10g ",soma.JLACge_glia_2013(0.5))
+//122
+output_file.printf("%.10g ",soma.JLACgc_glia_2013(0.5))
+//123
+output_file.printf("%.10g ",soma.NADHcytog_glia_2013(0.5))
+//124
+output_file.printf("%.10g ",soma.LACe_glia_2013(0.5))
+//125
+output_file.printf("%.10g ",soma.TmaxLACeg_glia_2013(0.5))
+//126
+output_file.printf("%.10g ",soma.TmaxLACge_glia_2013(0.5))
+//127
+output_file.printf("%.10g ",soma.JCKg_glia_2013(0.5))
+//128
+output_file.printf("%.10g ",soma.qAK_glia_2013(0.5))
+//129
+output_file.printf("%.10g ", soma.dAMPdATPn_glia_2013(0.5))
+//130
+output_file.printf("%.10g ",soma.dAMPdATPg_glia_2013(0.5))
+//131
+output_file.printf("%.10g ",soma.Isyn_glia_2013(0.5))
+//132
+output_file.printf("%.10g ",soma.vnstim_glia_2013(0.5))
+//133
+output_file.printf("%.10g ",soma.vgstim_glia_2013(0.5))
+//134
+output_file.printf("%.10g ", soma.JO2mcn_glia_2013(0.5))
+//135
+output_file.printf("%.10g ", soma.JO2mcg_glia_2013(0.5))
+//136
+output_file.printf("%.10g ", soma.JO2c_glia_2013(0.5))
+//137
+output_file.printf("%.10g ", soma.O2meanc_glia_2013(0.5))
+//138
+output_file.printf("%.10g ", soma.hk_glia_2013(0.5))
+//139
+output_file.printf("%.10g ", soma.cAMP_K_glia_2013(0.5))
+//140
+output_file.printf("%.10g ", soma.Jshuttleg_glia_2013(0.5))
+//141
+output_file.printf("%.10g ", soma.Ipump_glia_2013(0.5))
+//142
+output_file.printf("%.10g ", soma.JGLCec_glia_2013(0.5))
+//143
+output_file.printf("%.10g ", soma.JGLCgc_glia_2013(0.5))
+//144
+output_file.printf("%.10g ", soma.JGLCge_glia_2013(0.5))
+//145
+output_file.printf("%.10g ", soma.JGLCne_glia_2013(0.5))
+//146
+output_file.printf("%.10g ", soma.JLACce_glia_2013(0.5))
+//147
+output_file.printf("%.10g ", soma.JLACne_glia_2013(0.5))
+//148
+output_file.printf("%.10g ", soma.JATPasesg_glia_2013(0.5))
+//149
+output_file.printf("%.10g ", soma.JATPasesn_glia_2013(0.5))
+//150
+output_file.printf("%.10g \n", soma.JGLUeg_glia_2013(0.5))
+//151
+
+  	skipstep=0
+
+}
+
+ skipstep=skipstep+1
+
+} //this added for tbeginrec
+
+if (time >= tstim - dt/dt) { 
+
+//if  (time == tstim - 1000*dt){
+
+	if (write2 == 1) {
+
+output_file2.wopen("output_file2.dat")
+
+output_file2.printf("V= %.6g\n", soma.psin_glia_2013(0.5))
+output_file2.printf("Nan= %.6g\n", soma.Nan_glia_2013(0.5))
+output_file2.printf("Nag= %.6g\n", soma.Nag_glia_2013(0.5))
+output_file2.printf("GLCn= %.6g\n", soma.GLCn_glia_2013(0.5))
+output_file2.printf("GLCg= %.6g\n", soma.GLCg_glia_2013(0.5))
+output_file2.printf("GAPn= %.6g\n", soma.GAPn_glia_2013(0.5))
+output_file2.printf("GAPg= %.6g\n", soma.GAPg_glia_2013(0.5))
+output_file2.printf("PEPn= %.6g\n", soma.PEPn_glia_2013(0.5))
+output_file2.printf("PEPg= %.6g\n", soma.PEPg_glia_2013(0.5))
+output_file2.printf("PYRn= %.6g\n", soma.PYRn_glia_2013(0.5))
+output_file2.printf("PYRg= %.6g\n", soma.PYRg_glia_2013(0.5))
+output_file2.printf("LACn= %.6g\n", soma.LACn_glia_2013(0.5))
+output_file2.printf("LACg= %.6g\n", soma.LACg_glia_2013(0.5))
+output_file2.printf("NADHcyton= %.6g\n", soma.NADHcyton_glia_2013(0.5))
+output_file2.printf("NADHcytog= %.6g\n", soma.NADHcytog_glia_2013(0.5))
+output_file2.printf("ATPn= %.6g\n", soma.ATPn_glia_2013(0.5))
+output_file2.printf("ATPg= %.6g\n", soma.ATPg_glia_2013(0.5))
+output_file2.printf("PCrn= %.6g\n", soma.PCrn_glia_2013(0.5))
+output_file2.printf("PCrg= %.6g\n", soma.PCrg_glia_2013(0.5))
+output_file2.printf("O2n= %.6g\n", soma.O2n_glia_2013(0.5))
+output_file2.printf("O2g= %.6g\n", soma.O2g_glia_2013(0.5))
+output_file2.printf("O2c= %.6g\n", soma.O2c_glia_2013(0.5))
+output_file2.printf("GLCc= %.6g\n", soma.GLCc_glia_2013(0.5))
+output_file2.printf("LACc= %.6g\n", soma.LACc_glia_2013(0.5))
+output_file2.printf("Vv= %.6g\n", soma.Vv_glia_2013(0.5))
+output_file2.printf("Vvp= %.6g\n", soma.Vvp_glia_2013(0.5))
+output_file2.printf("Hb= %.6g\n", soma.Hb_glia_2013(0.5))
+output_file2.printf("GLCe= %.6g\n", soma.GLCe_glia_2013(0.5))
+output_file2.printf("LACe= %.6g\n", soma.LACe_glia_2013(0.5))
+output_file2.printf("psin= %.6g\n", soma.psin_glia_2013(0.5))
+output_file2.printf("h= %.6g\n", soma.h_glia_2013(0.5))
+output_file2.printf("n= %.6g\n", soma.n_glia_2013(0.5))
+output_file2.printf("Ca= %.6g\n", soma.Ca_glia_2013(0.5))
+output_file2.printf("NADHmiton= %.6g\n", soma.NADHmiton_glia_2013(0.5))
+output_file2.printf("NADHmitog= %.6g\n", soma.NADHmitog_glia_2013(0.5))
+output_file2.printf("Fout= %.6g\n", soma.Fout_glia_2013(0.5))
+output_file2.printf("qAK= %.6g\n",soma.qAK_glia_2013(0.5))
+output_file2.printf("\n")
+output_file2.printf("ADPn= %.6g\n", soma.ADPn_glia_2013(0.5))
+output_file2.printf("ADPg= %.6g\n", soma.ADPg_glia_2013(0.5))
+output_file2.printf("Rminusn = %.6g\n", soma.Rminusn_glia_2013(0.5))
+output_file2.printf("Rplusn = %.6g\n", soma.Rplusn_glia_2013(0.5))
+output_file2.printf("Rminusg = %.6g\n", soma.Rminusg_glia_2013(0.5))
+output_file2.printf("Rplusg = %.6g\n", soma.Rplusg_glia_2013(0.5))
+output_file2.printf("JleakNag = %.6g\n", soma.JleakNag_glia_2013(0.5))
+output_file2.printf("JleakNan = %.6g\n", soma.JleakNan_glia_2013(0.5))
+output_file2.printf("Jpumpg = %.6g\n", soma.Jpumpg_glia_2013(0.5))
+output_file2.printf("Jpumpn = %.6g\n", soma.Jpumpn_glia_2013(0.5))
+output_file2.printf("JGLCce = %.6g\n", soma.JGLCce_glia_2013(0.5))
+output_file2.printf("JGLCcg = %.6g\n", soma.JGLCcg_glia_2013(0.5))
+output_file2.printf("JGLCeg = %.6g\n", soma.JGLCeg_glia_2013(0.5))
+output_file2.printf("JGLCen = %.6g\n", soma.JGLCen_glia_2013(0.5))
+output_file2.printf("JHKPFKn = %.6g\n", soma.JHKPFKn_glia_2013(0.5))
+output_file2.printf("JHKPFKg = %.6g\n", soma.JHKPFKg_glia_2013(0.5))
+output_file2.printf("ADPn = %.6g\n", soma.ADPn_glia_2013(0.5))
+output_file2.printf("ADPg = %.6g\n", soma.ADPg_glia_2013(0.5))
+output_file2.printf("JPGKn = %.6g\n", soma.JPGKn_glia_2013(0.5))
+output_file2.printf("JPGKg = %.6g\n", soma.JPGKg_glia_2013(0.5))
+output_file2.printf("JPKn = %.6g\n", soma.JPKn_glia_2013(0.5))
+output_file2.printf("JPKg = %.6g\n", soma.JPKg_glia_2013(0.5))
+output_file2.printf("JLDHn = %.6g\n", soma.JLDHn_glia_2013(0.5))
+output_file2.printf("JLDHg = %.6g\n", soma.JLDHg_glia_2013(0.5))
+output_file2.printf("JLACec = %.6g\n", soma.JLACec_glia_2013(0.5))
+output_file2.printf("JLACcg = %.6g\n", soma.JLACcg_glia_2013(0.5))
+output_file2.printf("JLACeg = %.6g\n", soma.JLACeg_glia_2013(0.5))
+output_file2.printf("JLACen = %.6g\n", soma.JLACen_glia_2013(0.5))
+output_file2.printf("Jmitoing = %.6g\n", soma.Jmitoing_glia_2013(0.5))
+output_file2.printf("Jmitoinn = %.6g\n", soma.Jmitoinn_glia_2013(0.5))
+output_file2.printf("Jmitooutn = %.6g\n", soma.Jmitooutn_glia_2013(0.5))
+output_file2.printf("Jmitooutg = %.6g\n", soma.Jmitooutg_glia_2013(0.5))
+output_file2.printf("Jshuttlen = %.6g\n", soma.Jshuttlen_glia_2013(0.5))
+output_file2.printf("Jshuttleg = %.6g\n", soma.Jshuttleg_glia_2013(0.5))
+output_file2.printf("JCKn = %.6g\n", soma.JCKn_glia_2013(0.5))
+output_file2.printf("JCKg = %.6g\n", soma.JCKg_glia_2013(0.5))
+output_file2.printf("JO2mcn = %.6g\n", soma.JO2mcn_glia_2013(0.5))
+output_file2.printf("JO2mcg = %.6g\n", soma.JO2mcg_glia_2013(0.5))
+output_file2.printf("JO2c = %.6g\n", soma.JO2c_glia_2013(0.5))
+output_file2.printf("JGLCc = %.6g\n", soma.JGLCc_glia_2013(0.5))
+output_file2.printf("JLACc = %.6g\n", soma.JLACc_glia_2013(0.5))
+output_file2.printf("O2meanc = %.6g\n", soma.O2meanc_glia_2013(0.5))
+output_file2.printf("hh_EL = %.6g\n", soma.hh_EL_glia_2013(0.5))
+output_file2.printf("IL = %.6g\n", soma.IL_glia_2013(0.5))
+output_file2.printf("hh_alpham = %.6g\n", soma.hh_alpham_glia_2013(0.5))
+output_file2.printf("hh_betam = %.6g\n", soma.hh_betam_glia_2013(0.5))
+output_file2.printf("hh_alphah = %.6g\n", soma.hh_alphah_glia_2013(0.5))
+output_file2.printf("hh_betah = %.6g\n", soma.hh_betah_glia_2013(0.5))
+output_file2.printf("hh_alphan = %.6g\n", soma.hh_alphan_glia_2013(0.5))
+output_file2.printf("hh_betan = %.6g\n", soma.hh_betan_glia_2013(0.5))
+output_file2.printf("hh_mCa = %.6g\n", soma.hh_mCa_glia_2013(0.5))
+output_file2.printf("hh_tauh = %.6g\n", soma.hh_tauh_glia_2013(0.5))
+output_file2.printf("hh_minfinity = %.6g\n", soma.hh_minfinity_glia_2013(0.5))
+output_file2.printf("hh_ninfinity = %.6g\n", soma.hh_ninfinity_glia_2013(0.5))
+output_file2.printf("hh_hinfinity = %.6g\n", soma.hh_hinfinity_glia_2013(0.5))
+output_file2.printf("hh_taun = %.6g\n", soma.hh_taun_glia_2013(0.5))
+output_file2.printf("INa = %.6g\n", soma.INa_glia_2013(0.5))
+output_file2.printf("IK = %.6g\n", soma.IK_glia_2013(0.5))
+output_file2.printf("ICa = %.6g\n", soma.ICa_glia_2013(0.5))
+output_file2.printf("ImAHP = %.6g\n", soma.ImAHP_glia_2013(0.5))
+output_file2.printf("Ipump = %.6g\n", soma.Ipump_glia_2013(0.5))
+output_file2.printf("Fout = %.6g\n", soma.Fout_glia_2013(0.5))
+output_file2.printf("ren = %.6g\n", soma.ren_glia_2013(0.5)) // 
+output_file2.printf("reg = %.6g\n", soma.reg_glia_2013(0.5)) //
+output_file2.printf("rce = %.6g\n", soma.rce_glia_2013(0.5)) //
+output_file2.printf("rcn = %.6g\n", soma.rcn_glia_2013(0.5))
+output_file2.printf("rcg = %.6g\n", soma.rcg_glia_2013(0.5))
+output_file2.printf("JGLCec = %.6g\n", soma.JGLCec_glia_2013(0.5))
+output_file2.printf("JGLCgc = %.6g\n", soma.JGLCgc_glia_2013(0.5))
+output_file2.printf("JGLCge = %.6g\n", soma.JGLCge_glia_2013(0.5))
+output_file2.printf("JGLCne = %.6g\n", soma.JGLCne_glia_2013(0.5))
+output_file2.printf("JLACce= %.6g\n", soma.JLACce_glia_2013(0.5))
+output_file2.printf("JLACgc= %.6g\n", soma.JLACgc_glia_2013(0.5)) 
+output_file2.printf("JLACge= %.6g\n", soma.JLACge_glia_2013(0.5)) 
+output_file2.printf("JLACne= %.6g\n", soma.JLACne_glia_2013(0.5)) 
+output_file2.printf("un= %.6g\n", soma.un_glia_2013(0.5))
+output_file2.printf("ug= %.6g\n", soma.ug_glia_2013(0.5))
+output_file2.printf("dAMPdATPn= %.6g\n", soma.dAMPdATPn_glia_2013(0.5))
+output_file2.printf("dAMPdATPg= %.6g\n", soma.dAMPdATPg_glia_2013(0.5))
+output_file2.printf("ge = %.6g\n",ge)
+output_file2.printf("Jstimn = %.6g\n", soma.Jstimn_glia_2013(0.5)) 
+output_file2.printf("Jstimg = %.6g\n", soma.Jstimg_glia_2013(0.5)) 
+output_file2.printf("ne = %.6g\n", soma.ne_glia_2013(0.5))
+output_file2.printf("vip = %.6g\n", soma.vip_glia_2013(0.5))
+output_file2.printf("vip2 = %.6g\n", soma.vip2_glia_2013(0.5))
+output_file2.printf("INa = %.6g\n", soma.INa_glia_2013(0.5))
+output_file2.printf("IK = %.6g\n", soma.IK_glia_2013(0.5))
+output_file2.printf("ICa = %.6g\n", soma.ICa_glia_2013(0.5))
+output_file2.printf("kd = %.6g\n", soma.kd_glia_2013(0.5))
+output_file2.printf("peptotal = %.6g\n", soma.peptotal_glia_2013(0.5))
+output_file2.printf("CC = %.6g\n", soma.CC_glia_2013(0.5))
+output_file2.printf("PKa = %.6g\n",soma.PKa_glia_2013(0.5))
+output_file2.printf("R2C2 = %.6g\n",soma.R2C2_glia_2013(0.5))
+output_file2.printf("R2CcAMP2 = %.6g\n",soma.R2CcAMP2_glia_2013(0.5))
+output_file2.printf("R2cAMP4 = %.6g\n",soma.R2cAMP4_glia_2013(0.5))
+output_file2.printf("pep = %.6g\n",soma.pep_glia_2013(0.5))
+output_file2.printf("g6p = %.6g\n",soma.g6p_glia_2013(0.5))
+output_file2.printf("glyc = %.6g\n",soma.glyc_glia_2013(0.5))
+output_file2.printf("gluc = %.6g\n",soma.gluc_glia_2013(0.5))
+output_file2.printf("gluco = %.6g\n",soma.gluco_glia_2013(0.5))
+output_file2.printf("cAMP = %.6g\n",soma.cAMP_glia_2013(0.5))
+output_file2.printf("cAMPne = %.6g\n",soma.cAMP_ne_glia_2013(0.5))
+output_file2.printf("cAMPvip = %.6g\n",soma.cAMP_vip_glia_2013(0.5))
+output_file2.printf("cAMPvip2 = %.6g\n",soma.cAMP_vip2_glia_2013(0.5)) 
+output_file2.printf("cAMPtotal = %.6g\n",soma.cAMPtotal_glia_2013(0.5))
+output_file2.printf("cAMPtotsyn = %.6g\n",cAMPtotsyn_glia_2013(0.5))
+output_file2.printf("GSa = %.6g\n",soma.GSa_glia_2013(0.5))
+output_file2.printf("GPa = %.6g\n",soma.GPa_glia_2013(0.5))
+output_file2.printf("B_glucgn = %.6g\n",B_glucgn_glia_2013(0.5))
+output_file2.printf("B_ins = %.6g\n",B_ins_glia_2013(0.5))
+output_file2.printf("B_gluc = %.6g\n",B_gluc_glia_2013(0.5))
+output_file2.printf("blah = %.6g\n",soma.blah_glia_2013(0.5))
+output_file2.printf("PYRgtotal = %.6g\n",soma.PYRgtotal_glia_2013(0.5))
+output_file2.printf("TmaxLACeg = %.6g\n",soma.TmaxLACeg_glia_2013(0.5))
+output_file2.printf("TmaxLACge = %.6g\n",soma.TmaxLACge_glia_2013(0.5))
+output_file2.printf("Isyn = %.6g \n",soma.Isyn_glia_2013(0.5))
+output_file2.printf("vnstim= %.6g \n",soma.vnstim_glia_2013(0.5))
+output_file2.printf("vgstim= %.6g \n",soma.vgstim_glia_2013(0.5))
+output_file2.printf("vgstim= %.6g \n",soma.hk_glia_2013(0.5))
+output_file2.printf("vgstim= %.6g \n",soma.cAMP_K_glia_2013(0.5))
+output_file2.printf("vgstim= %.6g \n",soma.JGLUeg_glia_2013(0.5))
+
+
+output_file2.close()
+write2=0
+	}
+}
+
+
+
+
+if  (time >= tstim + dt/dt) {
+
+	if  (write3 == 1) {
+output_file3.wopen("output_file3.dat")
+output_file3.printf("V= %.6g\n", soma.psin_glia_2013(0.5))
+output_file3.printf("Nan= %.6g\n", soma.Nan_glia_2013(0.5))
+output_file3.printf("Nag= %.6g\n", soma.Nag_glia_2013(0.5))
+output_file3.printf("GLCn= %.6g\n", soma.GLCn_glia_2013(0.5))
+output_file3.printf("GLCg= %.6g\n", soma.GLCg_glia_2013(0.5))
+output_file3.printf("GAPn= %.6g\n", soma.GAPn_glia_2013(0.5))
+output_file3.printf("GAPg= %.6g\n", soma.GAPg_glia_2013(0.5))
+output_file3.printf("PEPn= %.6g\n", soma.PEPn_glia_2013(0.5))
+output_file3.printf("PEPg= %.6g\n", soma.PEPg_glia_2013(0.5))
+output_file3.printf("PYRn= %.6g\n", soma.PYRn_glia_2013(0.5))
+output_file3.printf("PYRg= %.6g\n", soma.PYRg_glia_2013(0.5))
+output_file3.printf("LACn= %.6g\n", soma.LACn_glia_2013(0.5))
+output_file3.printf("LACg= %.6g\n", soma.LACg_glia_2013(0.5))
+output_file3.printf("NADHcyton= %.6g\n", soma.NADHcyton_glia_2013(0.5))
+output_file3.printf("NADHcytog= %.6g\n", soma.NADHcytog_glia_2013(0.5))
+output_file3.printf("ATPn= %.6g\n", soma.ATPn_glia_2013(0.5))
+output_file3.printf("ATPg= %.6g\n", soma.ATPg_glia_2013(0.5))
+output_file3.printf("PCrn= %.6g\n", soma.PCrn_glia_2013(0.5))
+output_file3.printf("PCrg= %.6g\n", soma.PCrg_glia_2013(0.5))
+output_file3.printf("O2n= %.6g\n", soma.O2n_glia_2013(0.5))
+output_file3.printf("O2g= %.6g\n", soma.O2g_glia_2013(0.5))
+output_file3.printf("O2c= %.6g\n", soma.O2c_glia_2013(0.5))
+output_file3.printf("GLCc= %.6g\n", soma.GLCc_glia_2013(0.5))
+output_file3.printf("LACc= %.6g\n", soma.LACc_glia_2013(0.5))
+output_file3.printf("Vv= %.6g\n", soma.Vv_glia_2013(0.5))
+output_file3.printf("Vvp= %.6g\n", soma.Vvp_glia_2013(0.5))
+output_file3.printf("Hb= %.6g\n", soma.Hb_glia_2013(0.5))
+output_file3.printf("GLCe= %.6g\n", soma.GLCe_glia_2013(0.5))
+output_file3.printf("LACe= %.6g\n", soma.LACe_glia_2013(0.5))
+output_file3.printf("psin= %.6g\n", soma.psin_glia_2013(0.5))
+output_file3.printf("h= %.6g\n", soma.h_glia_2013(0.5))
+output_file3.printf("n= %.6g\n", soma.n_glia_2013(0.5))
+output_file3.printf("Ca= %.6g\n", soma.Ca_glia_2013(0.5))
+output_file3.printf("NADHmiton= %.6g\n", soma.NADHmiton_glia_2013(0.5))
+output_file3.printf("NADHmitog= %.6g\n", soma.NADHmitog_glia_2013(0.5))
+output_file3.printf("Fout= %.6g\n", soma.Fout_glia_2013(0.5))
+output_file3.printf("qAK= %.6g\n",soma.qAK_glia_2013(0.5))
+output_file3.printf("\n")
+output_file3.printf("ADPn= %.6g\n", soma.ADPn_glia_2013(0.5))
+output_file3.printf("ADPg= %.6g\n", soma.ADPg_glia_2013(0.5))
+output_file3.printf("Rminusn = %.6g\n", soma.Rminusn_glia_2013(0.5))
+output_file3.printf("Rplusn = %.6g\n", soma.Rplusn_glia_2013(0.5))
+output_file3.printf("Rminusg = %.6g\n", soma.Rminusg_glia_2013(0.5))
+output_file3.printf("Rplusg = %.6g\n", soma.Rplusg_glia_2013(0.5))
+output_file3.printf("JleakNag = %.6g\n", soma.JleakNag_glia_2013(0.5))
+output_file3.printf("JleakNan = %.6g\n", soma.JleakNan_glia_2013(0.5))
+output_file3.printf("Jpumpg = %.6g\n", soma.Jpumpg_glia_2013(0.5))
+output_file3.printf("Jpumpn = %.6g\n", soma.Jpumpn_glia_2013(0.5))
+output_file3.printf("JGLCce = %.6g\n", soma.JGLCce_glia_2013(0.5))
+output_file3.printf("JGLCcg = %.6g\n", soma.JGLCcg_glia_2013(0.5))
+output_file3.printf("JGLCeg = %.6g\n", soma.JGLCeg_glia_2013(0.5))
+output_file3.printf("JGLCen = %.6g\n", soma.JGLCen_glia_2013(0.5))
+output_file3.printf("JHKPFKn = %.6g\n", soma.JHKPFKn_glia_2013(0.5))
+output_file3.printf("JHKPFKg = %.6g\n", soma.JHKPFKg_glia_2013(0.5))
+output_file3.printf("ADPn = %.6g\n", soma.ADPn_glia_2013(0.5))
+output_file3.printf("ADPg = %.6g\n", soma.ADPg_glia_2013(0.5))
+output_file3.printf("JPGKn = %.6g\n", soma.JPGKn_glia_2013(0.5))
+output_file3.printf("JPGKg = %.6g\n", soma.JPGKg_glia_2013(0.5))
+output_file3.printf("JPKn = %.6g\n", soma.JPKn_glia_2013(0.5))
+output_file3.printf("JPKg = %.6g\n", soma.JPKg_glia_2013(0.5))
+output_file3.printf("JLDHn = %.6g\n", soma.JLDHn_glia_2013(0.5))
+output_file3.printf("JLDHg = %.6g\n", soma.JLDHg_glia_2013(0.5))
+output_file3.printf("JLACec = %.6g\n", soma.JLACec_glia_2013(0.5))
+output_file3.printf("JLACcg = %.6g\n", soma.JLACcg_glia_2013(0.5))
+output_file3.printf("JLACeg = %.6g\n", soma.JLACeg_glia_2013(0.5))
+output_file3.printf("JLACen = %.6g\n", soma.JLACen_glia_2013(0.5))
+output_file3.printf("Jmitoing = %.6g\n", soma.Jmitoing_glia_2013(0.5))
+output_file3.printf("Jmitoinn = %.6g\n", soma.Jmitoinn_glia_2013(0.5))
+output_file3.printf("Jmitooutn = %.6g\n", soma.Jmitooutn_glia_2013(0.5))
+output_file3.printf("Jmitooutg = %.6g\n", soma.Jmitooutg_glia_2013(0.5))
+output_file3.printf("Jshuttlen = %.6g\n", soma.Jshuttlen_glia_2013(0.5))
+output_file3.printf("Jshuttleg = %.6g\n", soma.Jshuttleg_glia_2013(0.5))
+output_file3.printf("JCKn = %.6g\n", soma.JCKn_glia_2013(0.5))
+output_file3.printf("JCKg = %.6g\n", soma.JCKg_glia_2013(0.5))
+output_file3.printf("JO2mcn = %.6g\n", soma.JO2mcn_glia_2013(0.5))
+output_file3.printf("JO2mcg = %.6g\n", soma.JO2mcg_glia_2013(0.5))
+output_file3.printf("JO2c = %.6g\n", soma.JO2c_glia_2013(0.5))
+output_file3.printf("JGLCc = %.6g\n", soma.JGLCc_glia_2013(0.5))
+output_file3.printf("JLACc = %.6g\n", soma.JLACc_glia_2013(0.5))
+output_file3.printf("O2meanc = %.6g\n", soma.O2meanc_glia_2013(0.5))
+output_file3.printf("hh_EL = %.6g\n", soma.hh_EL_glia_2013(0.5))
+output_file3.printf("IL = %.6g\n", soma.IL_glia_2013(0.5))
+output_file3.printf("hh_alpham = %.6g\n", soma.hh_alpham_glia_2013(0.5))
+output_file3.printf("hh_betam = %.6g\n", soma.hh_betam_glia_2013(0.5))
+output_file3.printf("hh_alphah = %.6g\n", soma.hh_alphah_glia_2013(0.5))
+output_file3.printf("hh_betah = %.6g\n", soma.hh_betah_glia_2013(0.5))
+output_file3.printf("hh_alphan = %.6g\n", soma.hh_alphan_glia_2013(0.5))
+output_file3.printf("hh_betan = %.6g\n", soma.hh_betan_glia_2013(0.5))
+output_file3.printf("hh_mCa = %.6g\n", soma.hh_mCa_glia_2013(0.5))
+output_file3.printf("hh_tauh = %.6g\n", soma.hh_tauh_glia_2013(0.5))
+output_file3.printf("hh_minfinity = %.6g\n", soma.hh_minfinity_glia_2013(0.5))
+output_file3.printf("hh_ninfinity = %.6g\n", soma.hh_ninfinity_glia_2013(0.5))
+output_file3.printf("hh_hinfinity = %.6g\n", soma.hh_hinfinity_glia_2013(0.5))
+output_file3.printf("hh_taun = %.6g\n", soma.hh_taun_glia_2013(0.5))
+output_file3.printf("INa = %.6g\n", soma.INa_glia_2013(0.5))
+output_file3.printf("IK = %.6g\n", soma.IK_glia_2013(0.5))
+output_file3.printf("ICa = %.6g\n", soma.ICa_glia_2013(0.5))
+output_file3.printf("ImAHP = %.6g\n", soma.ImAHP_glia_2013(0.5))
+output_file3.printf("Ipump = %.6g\n", soma.Ipump_glia_2013(0.5))
+output_file3.printf("Fout = %.6g\n", soma.Fout_glia_2013(0.5))
+output_file3.printf("ren = %.6g\n", soma.ren_glia_2013(0.5)) 
+output_file3.printf("reg = %.6g\n", soma.reg_glia_2013(0.5)) 
+output_file3.printf("rce = %.6g\n", soma.rce_glia_2013(0.5)) 
+output_file3.printf("rcn = %.6g\n", soma.rcn_glia_2013(0.5))
+output_file3.printf("rcg = %.6g\n", soma.rcg_glia_2013(0.5))
+output_file3.printf("JGLCec = %.6g\n", soma.JGLCec_glia_2013(0.5))
+output_file3.printf("JGLCgc = %.6g\n", soma.JGLCgc_glia_2013(0.5))
+output_file3.printf("JGLCge = %.6g\n", soma.JGLCge_glia_2013(0.5))
+output_file3.printf("JGLCne = %.6g\n", soma.JGLCne_glia_2013(0.5))
+output_file3.printf("JLACce= %.6g\n", soma.JLACce_glia_2013(0.5))
+output_file3.printf("JLACgc= %.6g\n", soma.JLACgc_glia_2013(0.5)) 
+output_file3.printf("JLACge= %.6g\n", soma.JLACge_glia_2013(0.5)) 
+output_file3.printf("JLACne= %.6g\n", soma.JLACne_glia_2013(0.5)) 
+output_file3.printf("un= %.6g\n", soma.un_glia_2013(0.5))
+output_file3.printf("ug= %.6g\n", soma.ug_glia_2013(0.5))
+output_file3.printf("dAMPdATPn= %.6g\n", soma.dAMPdATPn_glia_2013(0.5))
+output_file3.printf("dAMPdATPg= %.6g\n", soma.dAMPdATPg_glia_2013(0.5))
+output_file3.printf("ge = %.6g\n",ge)
+output_file3.printf("Jstimn = %.6g\n", soma.Jstimn_glia_2013(0.5)) 
+output_file3.printf("Jstimg = %.6g\n", soma.Jstimg_glia_2013(0.5)) 
+output_file3.printf("ne = %.6g\n", soma.ne_glia_2013(0.5))
+output_file3.printf("vip = %.6g\n", soma.vip_glia_2013(0.5))
+output_file3.printf("vip2 = %.6g\n", soma.vip2_glia_2013(0.5))
+output_file3.printf("INa = %.6g\n", soma.INa_glia_2013(0.5))
+output_file3.printf("IK = %.6g\n", soma.IK_glia_2013(0.5))
+output_file3.printf("ICa = %.6g\n", soma.ICa_glia_2013(0.5))
+output_file3.printf("kd = %.6g\n", soma.kd_glia_2013(0.5))
+output_file3.printf("peptotal = %.6g\n", soma.peptotal_glia_2013(0.5))
+output_file3.printf("CC = %.6g\n", soma.CC_glia_2013(0.5))
+output_file3.printf("PKa = %.6g\n",soma.PKa_glia_2013(0.5))
+output_file3.printf("R2C2 = %.6g\n",soma.R2C2_glia_2013(0.5))
+output_file3.printf("R2CcAMP2 = %.6g\n",soma.R2CcAMP2_glia_2013(0.5))
+output_file3.printf("R2cAMP4 = %.6g\n",soma.R2cAMP4_glia_2013(0.5))
+output_file3.printf("pep = %.6g\n",soma.pep_glia_2013(0.5))
+output_file3.printf("g6p = %.6g\n",soma.g6p_glia_2013(0.5))
+output_file3.printf("glyc = %.6g\n",soma.glyc_glia_2013(0.5))
+output_file3.printf("gluc = %.6g\n",soma.gluc_glia_2013(0.5))
+output_file3.printf("gluco = %.6g\n",soma.gluco_glia_2013(0.5))
+output_file3.printf("cAMP = %.6g\n",soma.cAMP_glia_2013(0.5))
+output_file3.printf("cAMPne = %.6g\n",soma.cAMP_ne_glia_2013(0.5))
+output_file3.printf("cAMPvip = %.6g\n",soma.cAMP_vip_glia_2013(0.5))
+output_file3.printf("cAMPvip2 = %.6g\n",soma.cAMP_vip2_glia_2013(0.5)) //
+output_file3.printf("cAMPtotal = %.6g\n",soma.cAMPtotal_glia_2013(0.5))
+output_file3.printf("cAMPtotsyn = %.6g\n",cAMPtotsyn_glia_2013(0.5))
+output_file3.printf("GSa = %.6g\n",soma.GSa_glia_2013(0.5))
+output_file3.printf("GPa = %.6g\n",soma.GPa_glia_2013(0.5))
+output_file3.printf("B_glucgn = %.6g\n",B_glucgn_glia_2013(0.5))
+output_file3.printf("B_ins = %.6g\n",B_ins_glia_2013(0.5))
+output_file3.printf("B_gluc = %.6g\n",B_gluc_glia_2013(0.5))
+output_file3.printf("blah = %.6g\n",soma.blah_glia_2013(0.5))
+output_file3.printf("PYRgtotal = %.6g\n",soma.PYRgtotal_glia_2013(0.5))
+output_file3.printf("TmaxLACeg = %.6g\n",soma.TmaxLACeg_glia_2013(0.5))
+output_file3.printf("TmaxLACge = %.6g\n",soma.TmaxLACge_glia_2013(0.5))
+output_file3.printf("Isyn = %.6g \n",soma.Isyn_glia_2013(0.5))
+output_file3.printf("vnstim= %.6g \n",soma.vnstim_glia_2013(0.5))
+output_file3.printf("vgstim= %.6g \n",soma.vgstim_glia_2013(0.5))
+output_file3.printf("vgstim= %.6g \n",soma.hk_glia_2013(0.5))
+output_file3.printf("vgstim= %.6g \n",soma.cAMP_K_glia_2013(0.5))
+output_file3.printf("vgstim= %.6g \n",soma.JGLUeg_glia_2013(0.5))
+
+output_file3.close()
+write3=0
+	}
+
+}
+
+  time=time+ dt
+}
+
+  output_file.close()
+
+
+
+
+
+
