@@ -7,6 +7,8 @@ pip install pandas numpy voxcell
 chmod +x script.py
 
 In this code we calculate total neuron numbers and save it in a txt file
+**MAKE SURE THE PICKLE FILE USED HERE IS UP TO DATE!** (It won't load with Python 3.9 or older.. )
+The pickle file is created in density3_test_total_neuron_count_pickle.
 
 Execute with: density1.3_print_info_unscaled.py
 '''
